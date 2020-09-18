@@ -31,7 +31,7 @@ object SimmoSandbox extends IndigoSandbox[Unit, Model] {
   def present(context: FrameContext[Unit], model: Model): SceneUpdateFragment =
     SceneUpdateFragment()
       .addGameLayerNodes(model.sprites)
-      .addUiLayerNodes(model.maybePortrait.toList)
+      .addUiLayerNodes(model.maybePortrait(context).toList)
 }
 
 /**
@@ -57,11 +57,16 @@ case class Model(units: List[SimmoUnit], selected: Option[Int]) {
    * Get the currently selected unit's portrait, if any.
    * @return Zero or one portrait.
    */
-  def maybePortrait: Option[Graphic] =
-    selected.map { i =>
-      val portrait = units(i).portrait
+  def maybePortrait(context: FrameContext[Unit]): Option[Group] =
+    selected.map(units).map { unit =>
+      val group = Group(
+        healthBar.graphic
+          .scaleBy(unit.hp.toDouble / unit.`type`.maxHp, 1),
+        unit.portrait.graphic
+          .moveTo(0, healthBar.height + 2)
+      )
       val bottom = SimmoSandbox.config.viewport.asRectangle.bottom
-      portrait.graphic.moveTo(5, bottom - portrait.height - 5)
+      group.moveTo(5, bottom - 5 - group.bounds(context.boundaryLocator).height)
     }
 
   /**
@@ -86,7 +91,7 @@ case class Model(units: List[SimmoUnit], selected: Option[Int]) {
 object Model {
   val initial = Model(
     List(
-      SimmoUnit(Type.Peasant, Point(30, 30)),
+      SimmoUnit(Type.Peasant, Point(30, 30), 10),
       SimmoUnit(Type.Knight, Point(110, 110))
     ),
     None
