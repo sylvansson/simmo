@@ -6,18 +6,23 @@ import indigo._
 import scala.scalajs.js.annotation.JSExportTopLevel
 
 @JSExportTopLevel("IndigoGame")
-object SimmoSandbox extends IndigoSandbox[Unit, Model] {
+object Simmo extends IndigoDemo[Unit, Unit, Model, Unit] {
+
+  val eventFilters: EventFilters = EventFilters.Default
 
   val config: GameConfig = GameConfig.default
-  val animations: Set[Animation] = Set()
-  val fonts: Set[indigo.FontInfo] = Set()
 
   val assets: Set[AssetType] = Units.assets
 
-  def setup(assetCollection: AssetCollection, dice: Dice): Startup[StartupErrors, Unit] =
+  def boot(flags: Map[String, String]): BootResult[Unit] =
+    BootResult.noData(defaultGameConfig).withAssets(assets)
+
+  def setup(bootData: Unit, assetCollection: AssetCollection, dice: Dice): Startup[StartupErrors, Unit] =
     Startup.Success(())
 
   def initialModel(startupData: Unit): Model = Model.initial
+
+  def initialViewModel(startupData: Unit, model: Model): Unit = ()
 
   def updateModel(context: FrameContext[Unit], model: Model): GlobalEvent => Outcome[Model] = {
     // Mark a unit as selected if it's been clicked.
@@ -28,7 +33,10 @@ object SimmoSandbox extends IndigoSandbox[Unit, Model] {
     case _ => Outcome(model)
   }
 
-  def present(context: FrameContext[Unit], model: Model): SceneUpdateFragment =
+  def updateViewModel(context: FrameContext[Unit], model: Model, viewModel: Unit): GlobalEvent => Outcome[Unit] =
+    _ => Outcome(viewModel)
+
+  def present(context: FrameContext[Unit], model: Model, viewModel: Unit): SceneUpdateFragment =
     SceneUpdateFragment()
       .addGameLayerNodes(model.sprites)
       .addUiLayerNodes(model.maybePortrait(context).toList)
@@ -65,7 +73,7 @@ case class Model(units: List[SimmoUnit], selected: Option[Int]) {
         unit.portrait.graphic
           .moveTo(0, healthBar.height + 2)
       )
-      val bottom = SimmoSandbox.config.viewport.asRectangle.bottom
+      val bottom = Simmo.config.viewport.asRectangle.bottom
       group.moveTo(5, bottom - 5 - group.bounds(context.boundaryLocator).height)
     }
 
