@@ -11,11 +11,16 @@ object Simmo extends IndigoDemo[Unit, Unit, Model, Unit] {
   val eventFilters: EventFilters = EventFilters.Default
 
   val config: GameConfig = GameConfig.default
+    .withViewport(
+      Grid.grid.width,
+      Grid.grid.height
+    )
+    .withClearColor(ClearColor.fromRGB(29, 97, 236))
 
-  val assets: Set[AssetType] = Units.assets
+  val assets: Set[AssetType] = Units.assets ++ Grid.assets
 
   def boot(flags: Map[String, String]): BootResult[Unit] =
-    BootResult.noData(defaultGameConfig).withAssets(assets)
+    BootResult.noData(config).withAssets(assets)
 
   def setup(bootData: Unit, assetCollection: AssetCollection, dice: Dice): Startup[StartupErrors, Unit] =
     Startup.Success(())
@@ -39,6 +44,7 @@ object Simmo extends IndigoDemo[Unit, Unit, Model, Unit] {
   def present(context: FrameContext[Unit], model: Model, viewModel: Unit): SceneUpdateFragment =
     SceneUpdateFragment()
       .addGameLayerNodes(model.sprites)
+      .addUiLayerNodes(Grid.grid.graphic)
       .addUiLayerNodes(model.maybePortrait(context).toList)
 }
 

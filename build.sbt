@@ -17,8 +17,8 @@ lazy val simmo =
       showCursor := true,
       title := "simmo",
       gameAssetsDirectory := "assets",
-      windowStartWidth := 550,
-      windowStartHeight := 400,
+      windowStartWidth := 640,
+      windowStartHeight := 480,
       libraryDependencies ++= Seq(
         "io.indigoengine" %%% "indigo-json-circe" % "0.3.0",
         "io.indigoengine" %%% "indigo" % "0.3.0",

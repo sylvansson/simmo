@@ -1,5 +1,6 @@
 package com.github.sylvansson.simmo
 
+import com.github.sylvansson.simmo.Grid._
 import enumeratum._
 import indigo._
 
@@ -10,11 +11,6 @@ object Units {
       .toSet
 
   val healthBar = Asset("health-bar.png", 64, 8)
-
-  case class Asset(name: String, width: Int, height: Int, x: Int = 0, y: Int = 0) {
-    val `type` = AssetType.Image(AssetName(name), AssetPath(s"assets/$name"))
-    val graphic = Graphic(x, y, width, height, 1, Material.Textured(`type`.name))
-  }
 
   sealed abstract class Type(val sprite: Asset, val portrait: Asset, val maxHp: Int) extends EnumEntry
 
@@ -40,7 +36,7 @@ object Units {
     val sprite = `type`.sprite
     val portrait = `type`.portrait
 
-    def drawSprite = sprite.graphic.moveTo(position)
+    def drawSprite = sprite.graphic.moveTo(position.snapToGrid)
 
     def isAtPosition(x: Int, y: Int): Boolean =
       drawSprite.lazyBounds.isPointWithin(x, y)
