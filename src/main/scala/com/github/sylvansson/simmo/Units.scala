@@ -32,14 +32,29 @@ object Units {
         )
   }
 
-  case class SimmoUnit(`type`: Type, position: Point, hp: Int) {
+  case class SimmoUnit(`type`: Type, position: Point, hp: Int, path: List[Point] = Nil) {
     val sprite = `type`.sprite
     val portrait = `type`.portrait
 
-    def drawSprite = sprite.graphic.moveTo(position.snapToGrid)
+    def drawSprite = sprite.graphic.moveTo(Tile(position).toPoint)
 
     def isAtPosition(x: Int, y: Int): Boolean =
       drawSprite.lazyBounds.isPointWithin(x, y)
+
+    def setTargetPosition(x: Int, y: Int) =
+      copy(path =
+        Pathfinding
+          .breadthFirstSearch(Tile(position), Tile(Point(x, y)))
+          .map(_.toPoint)
+          // We duplicate each tile in the path 15 times so that the
+          // unit doesn't move too quickly.
+          .flatMap(List.fill(15)(_))
+      )
+
+    def moveToNextPosition = path match {
+      case next :: rest => copy(position = next, path = rest)
+      case Nil => this
+    }
   }
   object SimmoUnit {
     def apply(`type`: Type, position: Point): SimmoUnit = SimmoUnit(`type`, position, `type`.maxHp)

@@ -1,6 +1,7 @@
 package com.github.sylvansson.simmo
 
 import com.github.sylvansson.simmo.Units._
+import enumeratum._
 import indigo._
 
 import scala.scalajs.js.annotation.JSExportTopLevel
@@ -31,9 +32,18 @@ object Simmo extends IndigoDemo[Unit, Unit, Model, Unit] {
 
   def updateModel(context: FrameContext[Unit], model: Model): GlobalEvent => Outcome[Model] = {
     // Mark a unit as selected if it's been clicked.
-    case MouseEvent.Click(x, y) => Outcome(model.select(x, y))
+    case MouseEvent.Click(x, y) => Outcome(model.handleClick(x, y))
     // Cycle through units when Tab is clicked.
-    case KeyboardEvent.KeyUp(Keys.TAB) => Outcome(model.selectNext)
+    case k: KeyboardEvent.KeyUp =>
+      Outcome(
+        k.keyCode match {
+          case Keys.TAB => model.selectNext
+          case Keys.KEY_M if model.selected.nonEmpty => model.setMode(Mode.AwaitingTargetPosition)
+          case Keys.ESCAPE => model.setMode(Mode.Idle)
+          case _ => model
+        }
+      )
+    case FrameTick => Outcome(model.moveUnitsToNextPosition)
     // Do nothing.
     case _ => Outcome(model)
   }
@@ -46,6 +56,14 @@ object Simmo extends IndigoDemo[Unit, Unit, Model, Unit] {
       .addGameLayerNodes(model.sprites)
       .addUiLayerNodes(Grid.grid.graphic)
       .addUiLayerNodes(model.maybePortrait(context).toList)
+      .addUiLayerNodes(model.maybeTargetPosition(context).toList)
+}
+
+sealed trait Mode extends EnumEntry
+object Mode extends Enum[Mode] {
+  val values = findValues
+  case object Idle extends Mode
+  case object AwaitingTargetPosition extends Mode
 }
 
 /**
@@ -53,7 +71,7 @@ object Simmo extends IndigoDemo[Unit, Unit, Model, Unit] {
  * @param units An array of units.
  * @param selected The index of the currently selected unit, if any.
  */
-case class Model(units: List[SimmoUnit], selected: Option[Int]) {
+case class Model(units: List[SimmoUnit], selected: Option[Int], mode: Mode = Mode.Idle) {
 
   /**
    * Get the current units' sprites.
@@ -84,15 +102,34 @@ case class Model(units: List[SimmoUnit], selected: Option[Int]) {
     }
 
   /**
-   * Detect whether a unit has been clicked. If so, mark the unit as selected.
-   * Otherwise, deselect the currently selected unit.
-   *
-   * @param x The click's X coordinate.
-   * @param y The click's Y coordinate.
-   * @return The updated model.
+   * Get a marker to indicate that we are in AwaitingTargetPosition
+   * mode, if applicable.
+   * @return Zero or one marker.
    */
-  def select(x: Int, y: Int): Model =
-    copy(selected = units.indices.find(i => units(i).isAtPosition(x, y)))
+  def maybeTargetPosition(context: FrameContext[Unit]): Option[Graphic] =
+    Option.when(mode == Mode.AwaitingTargetPosition)(
+      Grid.targetPosition.graphic
+        .withAlpha(0.9)
+        .withRef(8, 8)
+        .moveTo(context.mouse.position)
+    )
+
+  def handleClick(x: Int, y: Int): Model = {
+    (mode, selected) match {
+      // Detect whether a unit has been clicked. If so, mark the unit as selected.
+      // Otherwise, deselect the currently selected unit.
+      case (Mode.Idle, _) =>
+        copy(selected = units.indices.find(i => units(i).isAtPosition(x, y)))
+      case (Mode.AwaitingTargetPosition, Some(i)) =>
+        copy(
+          units = units.updated(i, units(i).setTargetPosition(x, y)),
+          mode = Mode.Idle
+        )
+      case _ => this
+    }
+  }
+
+  def setMode(mode: Mode): Model = copy(mode = mode)
 
   /**
    * Select the next unit in the array. If none is selected, select the first.
@@ -100,6 +137,12 @@ case class Model(units: List[SimmoUnit], selected: Option[Int]) {
    */
   def selectNext: Model =
     copy(selected = selected.map(i => (i + 1) % units.size).orElse(Some(0)))
+
+  /**
+   * Update each moving unit's position.
+   * @return The updated model.
+   */
+  def moveUnitsToNextPosition: Model = copy(units = units.map(_.moveToNextPosition))
 }
 
 object Model {
