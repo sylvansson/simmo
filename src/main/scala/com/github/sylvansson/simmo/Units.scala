@@ -12,7 +12,12 @@ object Units {
 
   val healthBar = Asset("health-bar.png", 64, 8)
 
-  sealed abstract class Type(val sprite: Asset, val portrait: Asset, val maxHp: Int) extends EnumEntry
+  sealed abstract class Type(
+    val sprite: Asset,
+    val portrait: Asset,
+    val maxHp: Double,
+    val regenPerFrameTick: Double
+  ) extends EnumEntry
 
   object Type extends Enum[Type] {
     val values = findValues
@@ -21,18 +26,20 @@ object Units {
         extends Type(
           Asset("peasant-sprite.png", 16, 16),
           Asset("peasant-portrait.bmp", 64, 64),
-          maxHp = 30
+          maxHp = 30,
+          regenPerFrameTick = 0.0002
         )
 
     case object Knight
         extends Type(
           Asset("knight-sprite.png", 16, 16),
           Asset("knight-portrait.bmp", 64, 64),
-          maxHp = 90
+          maxHp = 90,
+          regenPerFrameTick = 0.0008
         )
   }
 
-  case class SimmoUnit(`type`: Type, position: Point, hp: Int, path: List[Point] = Nil) {
+  case class SimmoUnit(`type`: Type, position: Point, hp: Double, path: List[Point] = Nil) {
     val sprite = `type`.sprite
     val portrait = `type`.portrait
 
@@ -55,6 +62,12 @@ object Units {
       case next :: rest => copy(position = next, path = rest)
       case Nil => this
     }
+
+    def regenerate =
+      if (hp == `type`.maxHp) this
+      else {
+        copy(hp = (hp * (1 + `type`.regenPerFrameTick)).min(`type`.maxHp))
+      }
   }
   object SimmoUnit {
     def apply(`type`: Type, position: Point): SimmoUnit = SimmoUnit(`type`, position, `type`.maxHp)

@@ -43,7 +43,7 @@ object Simmo extends IndigoDemo[Unit, Unit, Model, Unit] {
           case _ => model
         }
       )
-    case FrameTick => Outcome(model.moveUnitsToNextPosition)
+    case FrameTick => Outcome(model.moveUnitsToNextPosition.regenerateUnits)
     // Do nothing.
     case _ => Outcome(model)
   }
@@ -93,7 +93,7 @@ case class Model(units: List[SimmoUnit], selected: Option[Int], mode: Mode = Mod
     selected.map(units).map { unit =>
       val group = Group(
         healthBar.graphic
-          .scaleBy(unit.hp.toDouble / unit.`type`.maxHp, 1),
+          .scaleBy(unit.hp / unit.`type`.maxHp, 1),
         unit.portrait.graphic
           .moveTo(0, healthBar.height + 2)
       )
@@ -143,6 +143,8 @@ case class Model(units: List[SimmoUnit], selected: Option[Int], mode: Mode = Mod
    * @return The updated model.
    */
   def moveUnitsToNextPosition: Model = copy(units = units.map(_.moveToNextPosition))
+
+  def regenerateUnits: Model = copy(units = units.map(_.regenerate))
 }
 
 object Model {
